@@ -107,7 +107,7 @@ const WritingLayout = () => {
         if (response.ok) {
           const data = await response.json();
           setTask(data);
-          setTimeLeft(data.duration * 2.5);
+          setTimeLeft(data.duration * 60);
           setCurrentPartIndex(data.part_number - 1);
           
           // Use saved answer if exists, otherwise use previous answer from server

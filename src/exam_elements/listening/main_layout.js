@@ -27,6 +27,8 @@ const MainLayout = () => {
   const [colorTheme, setColorTheme] = useState('black-on-white');
   const [totalTestLength, setTotalTestLength] = useState(null);
   const [remainingTime, setRemainingTime] = useState(null);
+  const [isSubmissionPeriod, setIsSubmissionPeriod] = useState(false);
+  const [submissionTimeRemaining, setSubmissionTimeRemaining] = useState(5 * 60); // 5 minutes in seconds
   const menuRef = useRef(null);
   const [wifiStatus, setWifiStatus] = useState({
     isConnected: true,
@@ -230,7 +232,8 @@ const MainLayout = () => {
         setRemainingTime(prev => {
           if (prev <= 0) {
             clearInterval(timer);
-            handleSubmitExam();
+            // Start submission period instead of immediately submitting
+            setIsSubmissionPeriod(true);
             return 0;
           }
           return prev - 1;
@@ -240,6 +243,25 @@ const MainLayout = () => {
       return () => clearInterval(timer);
     }
   }, [isAudioStarted, totalTestLength]);
+
+  // Add submission period timer
+  useEffect(() => {
+    if (isSubmissionPeriod) {
+      const submissionTimer = setInterval(() => {
+        setSubmissionTimeRemaining(prev => {
+          if (prev <= 0) {
+            clearInterval(submissionTimer);
+            // Auto-submit when submission period ends
+            handleSubmitExam();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(submissionTimer);
+    }
+  }, [isSubmissionPeriod]);
 
   // Add this helper function
   const formatTime = (seconds) => {
@@ -911,15 +933,20 @@ const MainLayout = () => {
               <div className="ml-6">
                 <button
                   onClick={handleSubmitExam}
+                  disabled={!isSubmissionPeriod && remainingTime > 0}
                   className={`px-6 py-2 rounded-lg font-medium transition-colors
-                    ${colorTheme === 'black-on-white'
-                      ? 'bg-lime-500 text-white hover:bg-lime-600'
-                      : colorTheme === 'white-on-black'
-                        ? 'bg-gray-900 text-yellow-300 hover:bg-yellow-700'
-                        : 'bg-yellow-400 text-black hover:bg-yellow-500'
+                    ${!isSubmissionPeriod && remainingTime > 0 
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : colorTheme === 'black-on-white'
+                        ? 'bg-lime-500 text-white hover:bg-lime-600'
+                        : colorTheme === 'white-on-black'
+                          ? 'bg-gray-900 text-yellow-300 hover:bg-yellow-700'
+                          : 'bg-yellow-400 text-black hover:bg-yellow-500'
                     }`}
                 >
-                  Submit
+                  {isSubmissionPeriod 
+                    ? `Submit (${Math.floor(submissionTimeRemaining / 60)}:${(submissionTimeRemaining % 60).toString().padStart(2, '0')})` 
+                    : 'Submit'}
                 </button>
               </div>
             </div>
